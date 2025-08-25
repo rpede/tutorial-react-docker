@@ -7,10 +7,13 @@ multi-stage build.
 
 1. Click on the green "Use this template" button at the top
 2. Then select "Create a new repository"
+
+![Use this template screenshot](https://docs.github.com/assets/cb-76823/mw-1440/images/help/repository/use-this-template-button.webp)
+
 3. Click "Create repository from template"
 4. Type a repository name and click "Create Repository"
-5. Clone the repository following the instructions [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
-6. Open your local clone in WebStorm or another editor
+5. Make a local clone the repository following the instructions [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
+6. Open your local clone in WebStorm, Rider or another editor
 
 ## Running without docker
 
