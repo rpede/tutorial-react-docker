@@ -25,15 +25,25 @@ npm clean-install
 npm run dev
 ```
 
-Open the local url in a web browser.
+Open the local URL in a web browser.
 You should see something like the screenshot.
 
 ![screenshot of what the app is supposed to look like](./docs/screenshot.png)
+
+## Outcome
+
+You will see how a multi-stage Dockerfile can be used to:
+
+- Build entirely within a container
+- Produce a small image
+
+![Multi stage build](./docs/multi-stage-dockerfile.drawio.png)
 
 ## Build stage
 
 ### Copy files
 
+To begin, let's try to simply copy the source from into a container image.
 Create a `Dockerfile` in the root of repository with following content:
 
 ```Dockerfile
@@ -46,12 +56,12 @@ COPY . .
 Build the image with:
 
 ```sh
-docker build -t react-app .
+docker build --tag react-app .
 ```
 
 | Argument       | Description                                                   |
 | -------------- | ------------------------------------------------------------- |
-| `-t react-app` | Tag(/name) the build image "react-app"                        |
+| `--tag react-app` | Tag(/name) the build image "react-app"                        |
 | `.`            | You have to supply the directory containing your `Dockerfile` |
 
 Check the size with:
@@ -60,7 +70,12 @@ Check the size with:
 docker image ls | grep react-app
 ```
 
-Yikes, over 250MB 😧!
+Yikes, over 350MB 😧!
+
+> [!INFO]
+> The `grep` command extracts output matching a given pattern.
+> In this case the pattern is `react-app`.
+> See: [Grep Command in Linux](https://linuxize.com/post/how-to-use-grep-command-to-search-files-in-linux/)
 
 Check the size of the base image:
 
@@ -70,8 +85,8 @@ docker image ls | grep -e "node *22-alpine"
 docker image rm node:22-alpine
 ```
 
-That is like 100MB less.
-Certainly the source code for our simple demo app doesn't take up that much space.
+That is more than 100MB less.
+Certainly the source code for our simple app can't take up that much space.
 So, what is going on?
 
 ### Debug size issue
@@ -83,14 +98,23 @@ docker run -it --rm react-app sh
 ```
 
 Try it!
-Then type `ls -a` to list all files in current folder.
+Then type `ls -a` to list all files in working directory.
 Which is `/app` because you've set `WORKDIR /app` in the Dockerfile.
 
-Notice that `node_modules` is included in the output?
-You've installed dependencies when you ran it directly.
-Those dependencies got copied into the source code.
+Notice that `node_modules` is included in the output.
+You can check the size of `node_modules` with `du -sh node_modules`.
+Where `du` is short for disk-usage and `-sh` means summarize (`s`) in human
+(`h`) readable format.
 
 Type `exit` or hit <kbd>Ctrl</kbd>+<kbd>d</kbd> to exit the container.
+
+When you tried out the app directly on your host, you've installed dependencies.
+Those dependencies got copied into the container together with the source code
+using `COPY . .` instruction.
+
+Besides being unnecessary to copy dependencies into the container, it could
+also create problems if you host OS is different from the base images, such as
+if you are running Windows or Mac.
 
 This can be fixed by adding a `.dockerignore` file to root of repository with
 the paths you want to ignore.
@@ -105,9 +129,9 @@ docs
 ```
 
 It tells docker build to ignore the listed file patterns when copying files.
-It is very similar to `.gitignore` for Git.
+It is very similar to the `.gitignore` file used with git.
 
-Now, try to build again and check the size:
+Try to build again and check the size:
 
 ```sh
 docker build -t react-app .
@@ -122,6 +146,11 @@ image (unless your project is gigantic).
 
 That was a bit of a detour.
 To get back on track, we need to install dependencies before we can build.
+To install dependencies we actually only need to copy `package.json`.
+But to make sure we use the exact same version of dependencies as was used
+during deployment we also need `package-lock.json`.
+We can use the pattern `package*.json` to match both.
+The `*` means any character, similar to `%` in SQL.
 
 Replace the content of `Dockerfile` with:
 
@@ -152,7 +181,7 @@ installing dependencies.
 That way `RUN npm clean-install` only happens again when the dependencies
 change, regardless of changes to any of the source code.
 
-Read more about [Docker build cache](https://docs.docker.com/build/cache/).
+Read [Docker build cache](https://docs.docker.com/build/cache/) to learn more.
 
 ### Build the app
 
@@ -175,7 +204,7 @@ It allows us to refer to this staged from another stage.
 Try it out by building with:
 
 ```sh
-docker build -t react-app .
+docker build --tag react-app .
 ```
 
 Then add a line-break somewhere in `src/App.tsx` and build again.
@@ -189,7 +218,7 @@ The output shows what layers have been reused from cache.
  => [6/6] RUN npm run build               7.0s
 ```
 
-## Serve stage
+## Final stage
 
 For this we will use `nginx:alpine` as the base image.
 By default, it serves files from `/usr/share/nginx/html`.
@@ -203,7 +232,7 @@ Append this to your `Dockerfile`:
 
 ```Dockerfile
 # Stage 2: Serve the React app using nginx
-FROM nginx:alpine
+FROM nginx:alpine AS final
 # Copy the build output from the first stage to nginx's html directory
 COPY --from=build /app/dist /usr/share/nginx/html
 # Expose port 80
@@ -215,7 +244,7 @@ CMD ["nginx", "-g", "daemon off;"]
 Build the container with:
 
 ```sh
-docker build -t react-app .
+docker build --tag react-app .
 ```
 
 The tag `react-app` is now going to refer to the resulting image from the serve
@@ -238,7 +267,7 @@ docker run -d -p 8080:80 --rm --name react-app react-app
 | `-rm`              | Cleanup when the container is stopped.         |
 | `--name react-app` | Set a name for the container.                  |
 
-Then open [http://localhost:8080](http://localhost:8080).
+Then open <http://localhost:8080>.
 
 ## Cleaning up
 
@@ -278,4 +307,5 @@ For a real application, one would commit `.dockerignore` and `Dockerfile` to Git
 Then use something like GitHub Actions to build the docker image and push it to
 a registry for easy deployment.
 
-[Here](https://gist.github.com/rpede/e1c7fcbe3383dd25b89ef5da85fe9004) are the entire Dockerfile for reference.
+[Here](https://gist.github.com/rpede/e1c7fcbe3383dd25b89ef5da85fe9004) is the
+entire Dockerfile for reference.
