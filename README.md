@@ -297,6 +297,10 @@ docker system prune
 
 ## Closing thoughts
 
+You can push your changes to your github account if you want.
+It will give you some activity on your account and show the would that you
+completed this exercise.
+
 In a real world scenario you would push your images to a registry such as
 Docker Hub.
 We will skip that for now.
