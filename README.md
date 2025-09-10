@@ -185,6 +185,8 @@ Read [Docker build cache](https://docs.docker.com/build/cache/) to learn more.
 
 ### Build the app
 
+Let's expand the Dockerfile to build the app.
+
 Append the following to `Dockerfile`:
 
 ```Dockerfile
