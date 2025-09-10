@@ -72,7 +72,7 @@ docker image ls | grep react-app
 
 Yikes, over 350MB 😧!
 
-> ![INFO]
+> [!TIP]
 > The `grep` command extracts output matching a given pattern.
 > In this case the pattern is `react-app`.
 > See: [Grep Command in Linux](https://linuxize.com/post/how-to-use-grep-command-to-search-files-in-linux/)
